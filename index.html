@@ -718,17 +718,17 @@ function lvFlag(name){
 }
 
 // Renderiza la tarjeta del partido en vivo a partir del summary de ESPN.
+// Renderiza la tarjeta del partido en vivo a partir del summary de ESPN.
 function renderEnvivo(sum){
   const el=document.getElementById('vEnvivo'); if(!el) return;
   const comp=sum&&sum.header&&sum.header.competitions&&sum.header.competitions[0];
   if(!comp){ el.innerHTML=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div><div class="lv-empty">No hay detalles disponibles del partido.</div></div>`; return; }
-728
+
   const cs=comp.competitors||[];
   const home=cs.find(c=>c.homeAway==='home')||cs[0]||{};
   const away=cs.find(c=>c.homeAway==='away')||cs[1]||{};
   const hName=(home.team&&(home.team.displayName||home.team.name))||'';
   const aName=(away.team&&(away.team.displayName||away.team.name))||'';
-  // ESPN logos may be missing, so fallback to flagcdn
   let hLogo=(home.team&&home.team.logos&&home.team.logos[0]&&home.team.logos[0].href)||(home.team&&home.team.logo)||'';
   let aLogo=(away.team&&away.team.logos&&away.team.logos[0]&&away.team.logos[0].href)||(away.team&&away.team.logo)||'';
   if(!hLogo) hLogo=lvFlag(hName);
@@ -752,7 +752,6 @@ function renderEnvivo(sum){
   // ---- Goles y tarjetas (timeline de jugadas clave) ----
   const keyEvents=[];
   (sum.keyEvents||[]).forEach(k=>keyEvents.push(k));
-  // algunos summaries traen las jugadas dentro de commentary/plays; keyEvents es lo confiable
   if(keyEvents.length){
     const filteredEvents=keyEvents.filter(k=>{
       const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
@@ -771,15 +770,12 @@ function renderEnvivo(sum){
         else if(/substitution/.test(txt)){ ico='🔁'; }
         const min=k.clock&&k.clock.displayValue?k.clock.displayValue:(k.time||'');
         const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
-        // Intentamos extraer el nombre del equipo al que pertenece el evento
+        
+        // --- Banderas en la línea de tiempo ---
         const evTeamName = (k.team && (k.team.displayName || k.team.name)) || '';
-        // Usamos tu función existente para generar la imagen de la bandera
         const flagHtml = evTeamName ? flagImg(evTeamName) : '';
-        
-        // Insertamos la bandera entre el minuto y el icono
-        h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span>${flagHtml}<span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
 
-        
+        h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span>${flagHtml}<span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
       });
       h+=`</div>`;
     }
@@ -789,13 +785,17 @@ function renderEnvivo(sum){
   const hStats=(home.statistics||[]);
   const aStats=(away.statistics||[]);
   if(hStats.length&&aStats.length){
+    // --- Arreglo enriquecido con Córners, Atajadas, etc. ---
     const want=[
       {k:'possessionPct',lbl:'Posesión %'},
       {k:'totalShots',lbl:'Tiros'},
       {k:'shotsOnTarget',lbl:'Tiros al arco'},
       {k:'foulsCommitted',lbl:'Faltas'},
       {k:'wonCorners',lbl:'Córners'},
-      {k:'yellowCards',lbl:'Amarillas'}
+      {k:'yellowCards',lbl:'Amarillas'},
+      {k:'redCards',lbl:'Rojas'},
+      {k:'offsides',lbl:'Fueras de juego'},
+      {k:'saves',lbl:'Atajadas'}
     ];
     let rows='';
     want.forEach(w=>{
