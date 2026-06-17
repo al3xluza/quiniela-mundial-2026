@@ -748,21 +748,27 @@ function renderEnvivo(sum){
   (sum.keyEvents||[]).forEach(k=>keyEvents.push(k));
   // algunos summaries traen las jugadas dentro de commentary/plays; keyEvents es lo confiable
   if(keyEvents.length){
-    h+=`<div class="lv-section"><h4>Jugadas Clave</h4>`;
-    keyEvents.forEach(k=>{
-      const t=k.type&&(k.type.text||k.type.id)||'';
-      const txt=(k.text||'').toLowerCase();
-      let ico='•';
-      if(/goal/.test(txt)||/goal/i.test(t)){ ico='⚽'; }
-      else if(/yellow/.test(txt)){ ico='🟨'; }
-      else if(/red/.test(txt)){ ico='🟥'; }
-      else if(/penalty/.test(txt)){ ico='🎯'; }
-      else if(/substitution/.test(txt)){ ico='🔁'; }
-      const min=k.clock&&k.clock.displayValue?k.clock.displayValue:(k.time||'');
+    const filteredEvents=keyEvents.filter(k=>{
       const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
-      h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span><span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
+      return player&&player.trim().length>0;
     });
-    h+=`</div>`;
+    if(filteredEvents.length){
+      h+=`<div class="lv-section"><h4>Jugadas Clave</h4>`;
+      filteredEvents.forEach(k=>{
+        const t=k.type&&(k.type.text||k.type.id)||'';
+        const txt=(k.text||'').toLowerCase();
+        let ico='•';
+        if(/goal/.test(txt)||/goal/i.test(t)){ ico='⚽'; }
+        else if(/yellow/.test(txt)){ ico='🟨'; }
+        else if(/red/.test(txt)){ ico='🟥'; }
+        else if(/penalty/.test(txt)){ ico='🎯'; }
+        else if(/substitution/.test(txt)){ ico='🔁'; }
+        const min=k.clock&&k.clock.displayValue?k.clock.displayValue:(k.time||'');
+        const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
+        h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span><span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
+      });
+      h+=`</div>`;
+    }
   }
 
   // ---- Estadísticas (posesión, tiros, etc.) ----
