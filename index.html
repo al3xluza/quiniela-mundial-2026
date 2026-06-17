@@ -771,7 +771,15 @@ function renderEnvivo(sum){
         else if(/substitution/.test(txt)){ ico='🔁'; }
         const min=k.clock&&k.clock.displayValue?k.clock.displayValue:(k.time||'');
         const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
-        h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span><span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
+        // Intentamos extraer el nombre del equipo al que pertenece el evento
+        const evTeamName = (k.team && (k.team.displayName || k.team.name)) || '';
+        // Usamos tu función existente para generar la imagen de la bandera
+        const flagHtml = evTeamName ? flagImg(evTeamName) : '';
+        
+        // Insertamos la bandera entre el minuto y el icono
+        h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span>${flagHtml}<span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
+
+        
       });
       h+=`</div>`;
     }
