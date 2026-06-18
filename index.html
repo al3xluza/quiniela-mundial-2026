@@ -1000,7 +1000,9 @@ if(keyEvents.length){
   // Columna izquierda: marcador (scoreboard) + estadísticas.
   // Columna derecha: jugadas clave.
   // Dos columnas en desktop, apiladas en móvil. Si la derecha está vacía, la izquierda ocupa todo.
-  const colIzq=`<div class="lv-col-izq">${colScoreboard}${colStats?`<div class="lv-stats-wrap">${colStats}</div>`:''}</div>`;
+  //const colIzq=`<div class="lv-col-izq">${colScoreboard}${colStats?`<div class="lv-stats-wrap">${colStats}</div>`:''}</div>`;
+  const colIzq = `<div class="lv-col-izq" style="font-weight: bold;">${colScoreboard}${colStats ? `<div class="lv-stats-wrap">${colStats}</div>` : ''}</div>`;
+  
   const colDer=colEventos?`<div class="lv-col-der">${colEventos}</div>`:'';
   if(colDer){
     h+=`<div class="lv-cols">${colIzq}${colDer}</div>`;
