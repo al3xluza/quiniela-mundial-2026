@@ -989,8 +989,8 @@ if(keyEvents.length){
       
       // Rótulo según estado del partido
       if(rows){
-        const reportTitle=isFinal?'Estadísticas Finales':(isBreak?`Reporte Oficial (Min. ${currentMin}')`:`Estadísticas en vivo${currentMin?` (Min. ${currentMin}')`:''}`);
-        colStats+=`<div class="lv-section"><h4 style="color:var(--gold)">${reportTitle}</h4>${rows}</div>`;
+        const reportTitle=isFinal?'Estadísticas Finales':'Estadísticas';
+        ccolStats+=`<div class="lv-section"><h4 style="color:#fff;text-align:center;font-size:15px;font-weight:800">${reportTitle}</h4>${rows}</div>`;
       }
     }
     // Si no hay stats, colStats queda vacío y la columna colapsa (ver ensamblaje abajo)
