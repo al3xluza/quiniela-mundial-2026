@@ -749,9 +749,25 @@ function renderEnvivo(sum){
   const isFinal=stType.completed===true||stType.state==='post';
   const clockTxt=isFinal?'Final':(stType.detail||stType.shortDetail||st.displayClock||'En juego');
   const currentMin=parseInt(st.displayClock?.match(/\d+/)?.[0]||0);
+
+  const detail = String(stType.detail || '').toLowerCase();
+  const shortDetail = String(stType.shortDetail || '').toLowerCase();
   
   // isBreak: Hydration breaks, medio tiempo, y final (para mostrar Reporte Oficial)
-const isBreak=isFinal||((currentMin>=2&currentMin<=28)||(currentMin>=44&currentMin<=46)||(currentMin>=67&currentMin<=73)||(currentMin>=89));
+  //const isBreak=isFinal||((currentMin>=2&currentMin<=28)||(currentMin>=44&currentMin<=46)||(currentMin>=67&currentMin<=73)||(currentMin>=89));
+  
+  const isBreak =
+  isFinal ||
+  detail.includes('halftime') ||
+  detail.includes('half time') ||
+  detail.includes('end of first half') ||
+  detail.includes('break') ||
+  shortDetail === 'ht' ||
+  shortDetail.includes('half') ||
+  ((currentMin >= 24 && currentMin <= 28) ||
+   (currentMin >= 44 && currentMin <= 46) ||
+   (currentMin >= 67 && currentMin <= 73));
+  
   // Construir HTML
   let h=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div>`;
   h+=`<div class="lv-card">`;
