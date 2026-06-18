@@ -714,6 +714,18 @@ function lvFlag(name){
   return iso?`https://flagcdn.com/w80/${iso}.png`:'';
 }
 
+// ===== FUNCIÓN AUXILIAR: flagImg() - Convierte nombre de equipo a emoji de bandera =====
+const flagImg = (teamName) => {
+  const name = (teamName || '').toLowerCase();
+  const flags = {
+    'england': '🇬🇧', 'españa': '🇪🇸', 'alemania': '🇩🇪', 'francia': '🇫🇷',
+    'italia': '🇮🇹', 'portugal': '🇵🇹', 'holanda': '🇳🇱', 'bélgica': '🇧🇪',
+    'uruguay': '🇺🇾', 'argentina': '🇦🇷', 'brasil': '🇧🇷', 'méxico': '🇲🇽',
+    'usa': '🇺🇸', 'canada': '🇨🇦', 'croacia': '🇭🇷', 'dinamarca': '🇩🇰'
+  };
+  return flags[name] || '🏁'; // Bandera por defecto si no coincide
+};
+  
 // ========== renderEnvivo: Muestreo Estratégico con Validación Segura ==========
 // Renderiza la tarjeta del partido en vivo con lógica de muestreo estratégico:
 // - Jugadas Clave: Solo durante el juego activo (NO en breaks)
@@ -779,13 +791,21 @@ function renderEnvivo(sum){
         const typeId=(k.type?.id)||'';
         
         // Iconografía robusta (covers ESPN naming variations)
-        let ico='•';
-        if(/goal|gol/.test(txt)||/goal/i.test(typeId)){ ico='⚽'; }
-        else if(/substitution|cambio|sub/.test(txt)||/substitution/i.test(typeId)){ ico='🔄'; }
-        else if(/yellow|amarilla/.test(txt)||/yellow/i.test(typeId)){ ico='🟨'; }
-        else if(/red|roja/.test(txt)||/red/i.test(typeId)){ ico='🟥'; }
-        else if(/penalty|penal/.test(txt)){ ico='🎯'; }
-        
+        //let ico='•';
+        //if(/goal|gol/.test(txt)||/goal/i.test(typeId)){ ico='⚽'; }
+        //else if(/substitution|cambio|sub/.test(txt)||/substitution/i.test(typeId)){ ico='🔄'; }
+        //else if(/yellow|amarilla/.test(txt)||/yellow/i.test(typeId)){ ico='🟨'; }
+        //else if(/red|roja/.test(txt)||/red/i.test(typeId)){ ico='🟥'; }
+        //else if(/penalty|penal/.test(txt)){ ico='🎯'; }
+
+        // Iconografía y traducción de tipos de evento al español
+        let ico='•', esTipo='';
+        if(/goal|gol/.test(txt)||/goal/i.test(typeId)){ ico='⚽'; esTipo='Gol'; }
+        else if(/substitution|cambio|sub/.test(txt)||/substitution/i.test(typeId)){ ico='🔄'; esTipo='Sustitución'; }
+        else if(/yellow|amarilla/.test(txt)||/yellow/i.test(typeId)){ ico='🟨'; esTipo='Tarjeta amarilla'; }
+        else if(/red|roja/.test(txt)||/red/i.test(typeId)){ ico='🟥'; esTipo='Tarjeta roja'; }
+        else if(/penalty|penal/.test(txt)){ ico='🎯'; esTipo='Penal'; }
+                
         const min=k.clock?.displayValue||(k.time||'');
         const player=(k.participants?.[0]?.athlete?.displayName)||k.text||'';
         
