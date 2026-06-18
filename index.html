@@ -782,23 +782,7 @@ function renderEnvivo(sum){
     }
   }
 
-  // --- ESTADÍSTICAS ---
-  const hStats = (home.statistics || []), aStats = (away.statistics || []);
-  if(isBreak && hStats.length && aStats.length){
-    h += `<div class="lv-section"><h4 style="color:var(--gold)">Reporte Oficial (Min. ${currentMin}')</h4>`;
-    const want = [{k:'possessionPct',lbl:'Posesión %'},{k:'totalShots',lbl:'Tiros'},{k:'shotsOnTarget',lbl:'Tiros al arco'},{k:'wonCorners',lbl:'Córners'}];
-    want.forEach(w => {
-      const hs = hStats.find(s => s.name === w.k), as = aStats.find(s => s.name === w.k);
-      if(hs && as){
-        const hv = parseFloat(hs.displayValue) || 0, av = parseFloat(as.displayValue) || 0;
-        const hp = (hv + av) > 0 ? (hv / (hv + av) * 100) : 50;
-        h += `<div class="lv-stat"><div class="lv-stat-top"><span>${hs.displayValue}</span><span>${as.displayValue}</span></div><div class="lv-stat-lbl">${w.lbl}</div><div class="lv-bar"><span class="a" style="width:${hp}%"></span><span class="b" style="width:${100 - hp}%"></span></div></div>`;
-      }
-    });
-    h += `</div>`;
-  }
-
-// --- ALINEACIONES (VERSIÓN ROBUSTA) ---
+  // --- ALINEACIONES (VERSIÓN ROBUSTA) ---
   const rosters = sum.rosters || [];
   if (rosters.length >= 1) {
     h += `<div class="lv-section"><h4>Alineaciones</h4><div class="lv-xi">`;
