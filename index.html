@@ -736,39 +736,7 @@ function getLiveKeyEvents(sum, comp){
   });
 }
 
-function translatePlayToSpanish(txt){
-  let s = String(txt || '').trim();
-  if(!s) return '';
 
-  const replacements = [
-    [/goal/gi, 'Gol'],
-    [/yellow card/gi, 'Tarjeta amarilla'],
-    [/red card/gi, 'Tarjeta roja'],
-    [/substitution/gi, 'Sustitución'],
-    [/penalty/gi, 'Penal'],
-    [/own goal/gi, 'Autogol'],
-    [/assist/gi, 'Asistencia'],
-    [/foul/gi, 'Falta'],
-    [/corner/gi, 'Córner'],
-    [/offside/gi, 'Fuera de juego'],
-    [/attempt saved/gi, 'Remate atajado'],
-    [/attempt missed/gi, 'Remate fallado'],
-    [/attempt blocked/gi, 'Remate bloqueado'],
-    [/free kick/gi, 'Tiro libre'],
-    [/hand ball/gi, 'Mano'],
-    [/var decision/gi, 'Decisión VAR'],
-    [/end of first half/gi, 'Fin del primer tiempo'],
-    [/end of second half/gi, 'Fin del segundo tiempo'],
-    [/start first half/gi, 'Inicio del primer tiempo'],
-    [/start second half/gi, 'Inicio del segundo tiempo']
-  ];
-
-  replacements.forEach(([re, val])=>{
-    s = s.replace(re, val);
-  });
-
-  return s;
-}
   
 // ========== renderEnvivo: Muestreo Estratégico con Validación Segura ==========
 // Renderiza la tarjeta del partido en vivo con lógica de muestreo estratégico:
