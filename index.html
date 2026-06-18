@@ -710,8 +710,42 @@ async function fetchSummary(eventId){
 }
 
 function lvFlag(name){
-  const iso=FLAGS[String(name||'').toUpperCase().trim()];
-  return iso?`https://flagcdn.com/w80/${iso}.png`:'';
+  const raw = String(name || '').toUpperCase().trim();
+
+  const aliases = {
+    'CZECHIA':'REP. CHECA',
+    'CZECH REPUBLIC':'REP. CHECA',
+    'SOUTH AFRICA':'SUDAFRICA',
+    'MEXICO':'MEXICO',
+    'UNITED STATES':'USA',
+    'USA':'USA',
+    'SWITZERLAND':'SUIZA',
+    'BRAZIL':'BRASIL',
+    'MOROCCO':'MARRUECOS',
+    'SCOTLAND':'ESCOCIA',
+    'GERMANY':'ALEMANIA',
+    'NETHERLANDS':'HOLANDA',
+    'JAPAN':'JAPON',
+    'SWEDEN':'SUECIA',
+    'TUNISIA':'TUNEZ',
+    'BELGIUM':'BELGICA',
+    'EGYPT':'EGIPTO',
+    'NEW ZEALAND':'NUEVA ZELANDA',
+    'SAUDI ARABIA':'ARABIA SAUDITA',
+    'CAPE VERDE':'CABO VERDE',
+    'SPAIN':'ESPANA',
+    'FRANCE':'FRANCIA',
+    'NORWAY':'NORUEGA',
+    'ALGERIA':'ARGELIA',
+    'JORDAN':'JORDANIA',
+    'ENGLAND':'INGLATERRA',
+    'CROATIA':'CROACIA'
+  };
+
+  const key = FLAGS[raw] ? raw : aliases[raw];
+  const iso = FLAGS[key];
+
+  return iso ? `https://flagcdn.com/w80/${iso}.png` : '';
 }
 
 
@@ -858,7 +892,21 @@ if(keyEvents.length){
           '';
         
         // Integración de flagImg() para bandera del equipo
-const teamFlag=k.team ? lvFlag(k.team.displayName||k.team.name) : '';        
+    let eventTeamName = '';
+    
+    if(k.team){
+      eventTeamName = k.team.displayName || k.team.name || '';
+    }
+    else if(k.participants?.[0]?.team){
+      eventTeamName =
+        k.participants[0].team.displayName ||
+        k.participants[0].team.name ||
+        '';
+    }
+    
+    const teamFlag = eventTeamName ? lvFlag(eventTeamName) : '';    
+
+        
         //h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span>${teamFlag}<span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
       const descriptionRaw =
         k.text ||
@@ -867,7 +915,6 @@ const teamFlag=k.team ? lvFlag(k.team.displayName||k.team.name) : '';
         k.type?.description ||
         '';
       
-      const description = translatePlayToSpanish(descriptionRaw);
       
       if(!description.trim()) return;
       
