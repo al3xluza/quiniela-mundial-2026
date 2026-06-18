@@ -1,7 +1,4 @@
-577
-<const hLogo
-  726
-!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -717,7 +714,7 @@ function lvFlag(name){
   return iso?`https://flagcdn.com/w80/${iso}.png`:'';
 }
 
-// Renderiza la tarjeta del partido en vivo con bloques de "Reporte Oficial"
+// Renderiza la tarjeta del partido en vivo a partir del summary de ESPN.
 function renderEnvivo(sum){
   const el=document.getElementById('vEnvivo'); if(!el) return;
   const comp=sum&&sum.header&&sum.header.competitions&&sum.header.competitions[0];
@@ -728,6 +725,7 @@ function renderEnvivo(sum){
   const away=cs.find(c=>c.homeAway==='away')||cs[1]||{};
   const hName=(home.team&&(home.team.displayName||home.team.name))||'';
   const aName=(away.team&&(away.team.displayName||away.team.name))||'';
+  // ESPN logos may be missing, so fallback to flagcdn
   let hLogo=(home.team&&home.team.logos&&home.team.logos[0]&&home.team.logos[0].href)||(home.team&&home.team.logo)||'';
   let aLogo=(away.team&&away.team.logos&&away.team.logos[0]&&away.team.logos[0].href)||(away.team&&away.team.logo)||'';
   if(!hLogo) hLogo=lvFlag(hName);
@@ -738,12 +736,9 @@ function renderEnvivo(sum){
   const stType=st.type||{};
   const isFinal=stType.completed===true||stType.state==='post';
   const clockTxt=isFinal?'Final':(stType.detail||stType.shortDetail||st.displayClock||'En juego');
-  
-  // Lógica de momentos clave (Breaks)
-  const currentMin = parseInt(st.displayClock?.match(/\d+/) || 0);
-  const isBreak = isFinal || (currentMin >= 22 && currentMin <= 28) || (currentMin >= 44 && currentMin <= 46) || (currentMin >= 67 && currentMin <= 73) || (currentMin >= 89);
 
-  let h=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div><div class="lv-card">`;
+  let h=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div>`;
+  h+=`<div class="lv-card">`;
   h+=`<div class="lv-scoreboard">
         <div class="lv-tm">${hLogo?`<img src="${hLogo}" alt="">`:''}<div class="lv-tm-name">${hName}</div></div>
         <div class="lv-mid"><div class="lv-score">${hScore} - ${aScore}</div>
@@ -751,51 +746,82 @@ function renderEnvivo(sum){
         <div class="lv-tm">${aLogo?`<img src="${aLogo}" alt="">`:''}<div class="lv-tm-name">${aName}</div></div>
       </div>`;
 
-  // Bloque Jugadas Clave: Desaparece en los breaks
-  if(!isBreak){
-    const keyEvents=(sum.keyEvents||[]).filter(k=>{
+  // ---- Goles y tarjetas (timeline de jugadas clave) ----
+  const keyEvents=[];
+  (sum.keyEvents||[]).forEach(k=>keyEvents.push(k));
+  // algunos summaries traen las jugadas dentro de commentary/plays; keyEvents es lo confiable
+  if(keyEvents.length){
+    const filteredEvents=keyEvents.filter(k=>{
       const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
       return player&&player.trim().length>0;
     });
-    if(keyEvents.length){
+    if(filteredEvents.length){
       h+=`<div class="lv-section"><h4>Jugadas Clave</h4>`;
-      keyEvents.forEach(k=>{
-        const t=k.type&&(k.type.text||k.type.id)||''; const txt=(k.text||'').toLowerCase();
-        
-        let ico = '•'; 
-        const txt = (k.text || '').toLowerCase();
-        const t = k.type?.text?.toLowerCase() || ''; // Definimos t de forma segura
-        
-        if (/goal/i.test(txt) || /goal/i.test(t)) { ico = '⚽'; } 
-        else if (/yellow/i.test(txt)) { ico = '🟨'; } 
-        else if (/red/i.test(txt)) { ico = '🟥'; } 
-        else if (/sub/i.test(txt)) { ico = '🔁'; }
-        
+      filteredEvents.forEach(k=>{
+        const t=k.type&&(k.type.text||k.type.id)||'';
+        const txt=(k.text||'').toLowerCase();
+        let ico='•';
+        if(/goal/.test(txt)||/goal/i.test(t)){ ico='⚽'; }
+        else if(/yellow/.test(txt)){ ico='🟨'; }
+        else if(/red/.test(txt)){ ico='🟥'; }
+        else if(/penalty/.test(txt)){ ico='🎯'; }
+        else if(/substitution/.test(txt)){ ico='🔁'; }
         const min=k.clock&&k.clock.displayValue?k.clock.displayValue:(k.time||'');
         const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
-        const flagHtml = k.team ? flagImg(k.team.displayName || k.team.name) : '';
-        h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span>${flagHtml}<span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
+        h+=`<div class="lv-event"><span class="lv-ev-min">${min}</span><span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
       });
       h+=`</div>`;
     }
   }
 
-  // Bloque Estadísticas: Solo en breaks o final
-  const hStats=(home.statistics||[]), aStats=(away.statistics||[]);
-  if(isBreak && hStats.length && aStats.length){
-    h+=`<div class="lv-section"><h4 style="color:var(--gold)">Reporte Oficial (Min. ${currentMin}')</h4>`;
-    const want=[{k:'possessionPct',lbl:'Posesión %'},{k:'totalShots',lbl:'Tiros'},{k:'shotsOnTarget',lbl:'Tiros al arco'},{k:'wonCorners',lbl:'Córners'}];
+  // ---- Estadísticas (posesión, tiros, etc.) ----
+  const hStats=(home.statistics||[]);
+  const aStats=(away.statistics||[]);
+  if(hStats.length&&aStats.length){
+    const want=[
+      {k:'possessionPct',lbl:'Posesión %'},
+      {k:'totalShots',lbl:'Tiros'},
+      {k:'shotsOnTarget',lbl:'Tiros al arco'},
+      {k:'foulsCommitted',lbl:'Faltas'},
+      {k:'wonCorners',lbl:'Córners'},
+      {k:'yellowCards',lbl:'Amarillas'}
+    ];
+    let rows='';
     want.forEach(w=>{
-      const hs=hStats.find(s=>s.name===w.k), as=aStats.find(s=>s.name===w.k);
-      if(hs&&as){
-        const hv=parseFloat(hs.displayValue)||0, av=parseFloat(as.displayValue)||0;
-        const hp= (hv+av)>0?(hv/(hv+av)*100):50;
-        h+=`<div class="lv-stat"><div class="lv-stat-top"><span>${hs.displayValue}</span><span>${as.displayValue}</span></div><div class="lv-stat-lbl">${w.lbl}</div><div class="lv-bar"><span class="a" style="width:${hp}%"></span><span class="b" style="width:${100-hp}%"></span></div></div>`;
-      }
+      const hs=hStats.find(s=>s.name===w.k);
+      const as=aStats.find(s=>s.name===w.k);
+      if(!hs||!as) return;
+      const hv=parseFloat(hs.displayValue)||0, av=parseFloat(as.displayValue)||0;
+      const tot=hv+av;
+      const hp=tot>0?(hv/tot*100):50;
+      rows+=`<div class="lv-stat">
+        <div class="lv-stat-top"><span>${hs.displayValue}</span><span>${as.displayValue}</span></div>
+        <div class="lv-stat-lbl">${w.lbl}</div>
+        <div class="lv-bar"><span class="a" style="width:${hp}%"></span><span class="b" style="width:${100-hp}%"></span></div>
+      </div>`;
     });
-    h+=`</div>`;
+    if(rows) h+=`<div class="lv-section"><h4>Estadísticas</h4>${rows}</div>`;
   }
-  
+
+  // ---- Alineaciones ----
+  const rosters=sum.rosters||[];
+  if(rosters.length>=2){
+    const col=(r)=>{
+      const tName=(r.team&&(r.team.displayName||r.team.name))||'';
+      const logo=(r.team&&r.team.logos&&r.team.logos[0]&&r.team.logos[0].href)||(r.team&&r.team.logo)||'';
+      const starters=(r.roster||[]).filter(p=>p.starter);
+      const list=(starters.length?starters:(r.roster||[]).slice(0,11));
+      let pl='';
+      list.forEach(p=>{
+        const nm=(p.athlete&&(p.athlete.displayName||p.athlete.shortName))||'';
+        const num=p.jersey||(p.athlete&&p.athlete.jersey)||'';
+        pl+=`<div class="lv-xi-p"><span class="num">${num}</span><span>${nm}</span></div>`;
+      });
+      return `<div class="lv-xi-col"><h5>${logo?`<img src="${logo}" alt="">`:''}${tName}</h5>${pl}</div>`;
+    };
+    h+=`<div class="lv-section"><h4>Alineaciones</h4><div class="lv-xi">${col(rosters[0])}${col(rosters[1])}</div></div>`;
+  }
+
   h+=`</div></div>`;
   el.innerHTML=h;
 }
@@ -813,55 +839,32 @@ async function refreshEnvivo(){
   }
 }
 
-// Comprueba si hay partido en vivo y asegura que el tab sea visible si hay actividad
+// Comprueba si hay partido en vivo y muestra/oculta el tab.
 async function checkEnvivo(){
-  const tabBtn = document.getElementById('tab-envivo');
+  const tabBtn=document.getElementById('tab-envivo');
   try{
-    const ev = await findLiveEvent();
-    
-    // Obtenemos el resumen solo si existe un evento
-    let sum = null;
-    if(ev) {
-        sum = await fetchSummary(ev.id);
-    }
-    
-    // Determinamos si el partido está en vivo o recién finalizado
-    const isLive = ev != null;
-    const isPost = sum && sum.header && sum.header.status && sum.header.status.type && sum.header.status.type.state === 'post';
-
-    // Si hay evento en vivo O recién finalizado, mostramos el tab
-    if(isLive || isPost){
-      ENVIVO_EVENT = ev ? ev.id : ENVIVO_EVENT;
-      
-      // Aseguramos que el botón sea visible
-      tabBtn.style.display = '';
-      
+    const ev=await findLiveEvent();
+    if(ev){
+      ENVIVO_EVENT=ev.id;
       if(!ENVIVO_ACTIVE){
-        ENVIVO_ACTIVE = true;
+        ENVIVO_ACTIVE=true;
+        tabBtn.style.display='';
+        // arranca refresco rápido (cada 25 s) solo mientras hay partido
         if(ENVIVO_TIMER) clearInterval(ENVIVO_TIMER);
-        ENVIVO_TIMER = setInterval(refreshEnvivo, 30 * 1000);
+        ENVIVO_TIMER=setInterval(refreshEnvivo, 25*1000);
       }
-      
-      // Renderizamos con el resumen disponible
-      if(sum) renderEnvivo(sum);
-      
-      // Si el partido finalizó, programamos el cierre del tab en 10 min
-      if(isPost && !tabBtn.dataset.timer){
-        tabBtn.dataset.timer = setTimeout(() => {
-          tabBtn.style.display = 'none';
-          tabBtn.dataset.timer = '';
-          // Regresamos al inicio si el usuario estaba viendo el tab
-          if(tabBtn.classList.contains('active')) document.getElementById('tab-tabla').click();
-        }, 10 * 60 * 1000); // 10 minutos
-      }
-    } else {
-      // Si no hay nada, ocultamos
-      ENVIVO_ACTIVE = false;
-      tabBtn.style.display = 'none';
-      if(ENVIVO_TIMER){ clearInterval(ENVIVO_TIMER); ENVIVO_TIMER = null; }
+      refreshEnvivo();
+    }else{
+      ENVIVO_EVENT=null;
+      ENVIVO_ACTIVE=false;
+      tabBtn.style.display='none';
+      if(ENVIVO_TIMER){ clearInterval(ENVIVO_TIMER); ENVIVO_TIMER=null; }
+      // si el usuario estaba en el tab en vivo y se acabó el partido, vuelve a Posiciones
+      if(tabBtn.classList.contains('active')) document.getElementById('tab-tabla').click();
     }
-  } catch(e) { 
-    console.error('Error crítico en checkEnvivo:', e); 
+  }catch(e){
+    console.error('Envivo check error:',e);
+    // Si el scoreboard falla por CORS, no rompemos nada: el tab simplemente no aparece.
   }
 }
 
