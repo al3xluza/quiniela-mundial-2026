@@ -757,25 +757,23 @@ function renderEnvivo(sum){
         <div class="lv-tm">${aLogo ? `<img src="${aLogo}" alt="">` : ''}<div class="lv-tm-name">${aName}</div></div>
       </div>`;
 
-  // --- JUGADAS CLAVE (Con banderas, sustituciones, goles, etc) ---
-  if(!isBreak){
-    const keyEvents = (sum.keyEvents || []).filter(k => {
-      const player = (k.participants && k.participants[0] && k.participants[0].athlete && k.participants[0].athlete.displayName) || k.text || '';
-      return player && player.trim().length > 0;
-    });
-    if(keyEvents.length){
+// --- JUGADAS CLAVE (VERSIÓN ROBUSTA) ---
+  if (!isBreak) {
+    // Si keyEvents no existe, creamos un arreglo vacío para no romper el .forEach
+    const events = sum.keyEvents || []; 
+    if (events.length > 0) {
       h += `<div class="lv-section"><h4>Jugadas Clave</h4>`;
-      keyEvents.forEach(k => {
-        const t = k.type && (k.type.text || k.type.id) || ''; 
+      events.forEach(k => {
+        // Fallback seguro para el texto del evento
         const txt = (k.text || '').toLowerCase();
-        let ico = '•'; 
-        if(/goal/i.test(txt)||/goal/i.test(t)){ ico = '⚽'; } 
-        else if(/yellow/i.test(txt)){ ico = '🟨'; } 
-        else if(/red/i.test(txt)){ ico = '🟥'; }
-        else if(/sub/i.test(txt)){ ico = '🔁'; } // Añadido ícono de sustitución
-        
-        const min = k.clock && k.clock.displayValue ? k.clock.displayValue : (k.time || '');
-        const player = (k.participants && k.participants[0] && k.participants[0].athlete && k.participants[0].athlete.displayName) || k.text || '';
+        let ico = '•';
+        if (/goal/i.test(txt)) ico = '⚽';
+        else if (/yellow/i.test(txt)) ico = '🟨';
+        else if (/red/i.test(txt)) ico = '🟥';
+        else if (/sub/i.test(txt)) ico = '🔁';
+
+        const min = k.clock?.displayValue || k.time || '';
+        const player = k.participants?.[0]?.athlete?.displayName || k.text || 'Evento';
         const flagHtml = k.team ? flagImg(k.team.displayName || k.team.name) : '';
         
         h += `<div class="lv-event"><span class="lv-ev-min">${min}</span>${flagHtml}<span class="lv-ev-ico">${ico}</span><span>${player}</span></div>`;
@@ -800,28 +798,19 @@ function renderEnvivo(sum){
     h += `</div>`;
   }
 
-  // --- ALINEACIONES ---
+// --- ALINEACIONES (VERSIÓN ROBUSTA) ---
   const rosters = sum.rosters || [];
-  if(rosters.length >= 2){
-    const col = (r) => {
-      const tName = (r.team && (r.team.displayName || r.team.name)) || '';
-      const logo = (r.team && r.team.logos && r.team.logos[0] && r.team.logos[0].href) || (r.team && r.team.logo) || '';
-      const starters = (r.roster || []).filter(p => p.starter);
-      const list = (starters.length ? starters : (r.roster || []).slice(0, 11));
-      let pl = '';
-      list.forEach(p => {
-        const nm = (p.athlete && (p.athlete.displayName || p.athlete.shortName)) || '';
-        const num = p.jersey || (p.athlete && p.athlete.jersey) || '';
-        pl += `<div class="lv-xi-p"><span class="num">${num}</span><span>${nm}</span></div>`;
+  if (rosters.length >= 1) {
+    h += `<div class="lv-section"><h4>Alineaciones</h4><div class="lv-xi">`;
+    rosters.forEach(r => {
+      h += `<div class="lv-xi-col"><h5>${r.team?.displayName || 'Equipo'}</h5>`;
+      (r.roster || []).slice(0, 11).forEach(p => {
+        h += `<div class="lv-xi-p"><span class="num">${p.jersey || ''}</span><span>${p.athlete?.displayName || 'Jugador'}</span></div>`;
       });
-      return `<div class="lv-xi-col"><h5>${logo ? `<img src="${logo}" alt="">` : ''}${tName}</h5>${pl}</div>`;
-    };
-    h += `<div class="lv-section"><h4>Alineaciones</h4><div class="lv-xi">${col(rosters[0])}${col(rosters[1])}</div></div>`;
+      h += `</div>`;
+    });
+    h += `</div></div>`;
   }
-  
-  h += `</div></div>`;
-  el.innerHTML = h;
-}
 
   
 // Refresca los detalles del partido en vivo.
