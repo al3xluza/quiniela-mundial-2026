@@ -714,17 +714,6 @@ function lvFlag(name){
   return iso?`https://flagcdn.com/w80/${iso}.png`:'';
 }
 
-// ===== FUNCIÓN AUXILIAR: flagImg() - Convierte nombre de equipo a emoji de bandera =====
-const flagImg = (teamName) => {
-  const name = (teamName || '').toLowerCase();
-  const flags = {
-    'england': '🇬🇧', 'españa': '🇪🇸', 'alemania': '🇩🇪', 'francia': '🇫🇷',
-    'italia': '🇮🇹', 'portugal': '🇵🇹', 'holanda': '🇳🇱', 'bélgica': '🇧🇪',
-    'uruguay': '🇺🇾', 'argentina': '🇦🇷', 'brasil': '🇧🇷', 'méxico': '🇲🇽',
-    'usa': '🇺🇸', 'canada': '🇨🇦', 'croacia': '🇭🇷', 'dinamarca': '🇩🇰'
-  };
-  return flags[name] || '🏁'; // Bandera por defecto si no coincide
-};
   
 // ========== renderEnvivo: Muestreo Estratégico con Validación Segura ==========
 // Renderiza la tarjeta del partido en vivo con lógica de muestreo estratégico:
