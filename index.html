@@ -761,7 +761,7 @@ function renderEnvivo(sum){
       h+=`<div class="lv-section"><h4>Jugadas Clave</h4>`;
       keyEvents.forEach(k=>{
         const t=k.type&&(k.type.text||k.type.id)||''; const txt=(k.text||'').toLowerCase();
-        let ico='•'; if(/goal/.test(txt)||/goal/i.test(t)){ ico='⚽'; } else if(/yellow/.test(txt)){ ico='🟨'; } else if(/red/.test(txt)){ ico='🟥'; else if (/sub/i.test(txt)) ico = '🔁';}
+        let ico='•'; if(/goal/.test(txt)||/goal/i.test(t)){ ico='⚽'; } else if(/yellow/.test(txt)){ ico='🟨'; } else if(/red/.test(txt)){ ico='🟥'; else if (/sub/i.test(txt)) { ico = '🔁';}
         const min=k.clock&&k.clock.displayValue?k.clock.displayValue:(k.time||'');
         const player=(k.participants&&k.participants[0]&&k.participants[0].athlete&&k.participants[0].athlete.displayName)||k.text||'';
         const flagHtml = k.team ? flagImg(k.team.displayName || k.team.name) : '';
