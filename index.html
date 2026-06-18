@@ -838,6 +838,12 @@ function renderEnvivo(sum){
         const reportTitle=isFinal?'Estadísticas Finales':`Reporte Oficial (Min. ${currentMin}')`;
         h+=`<div class="lv-section"><h4 style="color:var(--gold)">${reportTitle}</h4>${rows}</div>`;
       }
+    } else {
+      // FALLBACK: Si ESPN no envía datos de estadísticas, mostrar mensaje informativo
+      h+=`<div class="lv-section"><h4 style="color:var(--gold)">Reporte Oficial (Min. ${currentMin}')</h4>
+        <div style="text-align:center;padding:20px;color:rgba(239,245,240,.6);font-size:13px;font-style:italic">
+          Estadísticas no disponibles en ESPN para este partido
+        </div></div>`;
     }
   }
 
