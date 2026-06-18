@@ -751,8 +751,7 @@ function renderEnvivo(sum){
   const currentMin=parseInt(st.displayClock?.match(/\d+/)?.[0]||0);
   
   // isBreak: Hydration breaks, medio tiempo, y final (para mostrar Reporte Oficial)
-  const isBreak=isFinal||(currentMin>=22&&currentMin<=28)||(currentMin>=44&&currentMin<=46)||(currentMin>=67&&currentMin<=73)||(currentMin>=89);
-
+const isBreak=isFinal||((currentMin>=2&currentMin<=28)||(currentMin>=44&currentMin<=46)||(currentMin>=67&currentMin<=73)||(currentMin>=89));
   // Construir HTML
   let h=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div>`;
   h+=`<div class="lv-card">`;
