@@ -584,7 +584,8 @@ function renderTarjetas(){
 /* ---------- Goleadores (pestaña GOLEADORES del Sheet) ---------- */
 // Mapa selección (nombre quiniela) -> código ISO para banderas (flagcdn).
 const FLAGS = {
-  'COREA DEL SUR':'kr','MEXICO':'mx','REP. CHECA':'cz','SUDAFRICA':'za',
+  'COREA DEL SUR':'kr','KOREA':'kr','SOUTH KOREA':'kr',
+  'MEXICO':'mx','REP. CHECA':'cz','SUDAFRICA':'za',
   'BOSNIA-HERZEGOVINA':'ba','CANADA':'ca','QATAR':'qa','SUIZA':'ch',
   'BRASIL':'br','ESCOCIA':'gb-sct','HAITI':'ht','MARRUECOS':'ma',
   'AUSTRALIA':'au','PARAGUAY':'py','TURQUIA':'tr','USA':'us',
@@ -818,7 +819,12 @@ function renderEnvivo(sum){
   const st=comp.status||(sum.header?.status)||{};
   const stType=st.type||{};
   const isFinal=stType.completed===true||stType.state==='post';
-  const clockTxt=isFinal?'Final':(stType.detail||stType.shortDetail||st.displayClock||'En juego');
+  const clockTxt=isFinal?'Final':(
+    stType.detail && /halftime|half time|end of first half/i.test(stType.detail) ? 'Descanso' :
+    stType.detail && /break|delay/i.test(stType.detail) ? 'Pausa' :
+    stType.shortDetail && /ht|half/i.test(stType.shortDetail) ? 'Descanso' :
+    st.displayClock || 'En juego'
+  );
   const currentMin=parseInt(st.displayClock?.match(/\d+/)?.[0]||0);
 
   const detail = String(stType.detail || '').toLowerCase();
