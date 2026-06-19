@@ -992,8 +992,8 @@ if(keyEvents.length){
       
       // Rótulo según estado del partido
       if(rows){
-        const reportTitle=isFinal?'Estadísticas Finales':(isBreak?`Reporte Oficial (Min. ${currentMin}')`:`Estadísticas en vivo${currentMin?` (Min. ${currentMin}')`:''}`);
-        colStats+=`<div class="lv-section"><h4 style="color:var(--gold)">${reportTitle}</h4>${rows}</div>`;
+        const reportTitle='ESTADÍSTICAS';
+        colStats+=`<div class="lv-section"><h4 style="color:#FFFFFF;text-align:center;font-weight:700">${reportTitle}</h4>${rows}</div>`;
       }
     }
     // Si no hay stats, colStats queda vacío y la columna colapsa (ver ensamblaje abajo)
@@ -1152,5 +1152,8 @@ async function checkEnvivo(){
 loadResults(true);
 setInterval(()=>loadResults(true), 30*1000); // refresco automático cada 60 s
 </script>
+
+
+
 </body>
 </html>
