@@ -950,6 +950,9 @@ if(keyEvents.length){
       
       if(!description.trim()) return;
       
+      // Filtrar eventos descriptivos sin valor (delay messages genéricos)
+      if(/^delay (in match|over)/.test(description.toLowerCase())) return;
+      
       // No mostrar bandera en pausas de hidratación
       const flagHtml = !isHydrationBreak && teamFlag ? `<img src="${teamFlag}" class="flag" alt="">` : '';
       
