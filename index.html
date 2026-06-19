@@ -199,7 +199,7 @@ input[type="number"] {
 .lv-clock.ft{color:var(--ok)}
 .lv-clock .livedot{font-size:9px;vertical-align:1px;animation:liveblink 1.4s ease-in-out infinite}
 .lv-section{border-top:1px solid rgba(255,255,255,.1);padding:14px 16px}
-.lv-section h4{font-family:'Saira Condensed';font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:12px}
+.lv-section h4{font-family:'Saira Condensed';font-weight:700;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#FFFFFF;margin-bottom:12px;text-align:center}
 .lv-event{display:flex;align-items:center;gap:8px;font-size:13px;padding:5px 0;color:rgba(255,255,255,.9)}
 .lv-event .lv-ev-min{font-family:'JetBrains Mono';font-weight:700;font-size:12px;color:#FFFFFF;min-width:34px}
 .lv-event .lv-ev-ico{font-size:13px;width:16px;text-align:center}
@@ -772,6 +772,8 @@ function getLiveKeyEvents(sum, comp){
     ...(comp?.details || [])
   ];
 
+  // Deduplicar eventos por descripción exacta
+  const seen = new Set();
   return sources.filter(e=>{
     const txt =
       e.text ||
@@ -780,8 +782,11 @@ function getLiveKeyEvents(sum, comp){
       e.type?.text ||
       e.type?.description ||
       '';
-
-    return String(txt).trim().length > 0;
+    
+    const trimmed = String(txt).trim();
+    if(!trimmed.length || seen.has(trimmed)) return false;
+    seen.add(trimmed);
+    return true;
   });
 }
 
@@ -937,14 +942,22 @@ if(keyEvents.length){
         k.type?.description ||
         '';
       
+      // Mejorar descripción de pausas/delays
+      let description = descriptionRaw;
+      let isHydrationBreak = false;
+      if(/^start delay/i.test(description)) { description = '💧 Hydration Break'; isHydrationBreak = true; }
+      else if(/^end delay/i.test(description)) { description = '💧 Hydration Break End'; isHydrationBreak = true; }
       
-      if(!descriptionRaw.trim()) return;
+      if(!description.trim()) return;
+      
+      // No mostrar bandera en pausas de hidratación
+      const flagHtml = !isHydrationBreak && teamFlag ? `<img src="${teamFlag}" class="flag" alt="">` : '';
       
       colEventos+=`<div class="lv-event">
         <span class="lv-ev-min">${min}</span>
-        ${teamFlag ? `<img src="${teamFlag}" class="flag" alt="">` : ''}
+        ${flagHtml}
         <span class="lv-ev-ico">${ico}</span>
-        <span>${descriptionRaw}</span>
+        <span>${description}</span>
       </div>`;
             
       
