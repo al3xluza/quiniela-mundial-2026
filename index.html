@@ -396,28 +396,52 @@ function renderTabla(){
   }
   let h = nLive>0 ? `<div class="livebanner"><span class="livedot">●</span> EN VIVO${liveDetail}</div>` : '';
   
-  // SIMULADOR DE RESULTADOS
-  if(nLive>0){
+  // PRÓXIMOS PARTIDOS + SIMULADOR (INTEGRADOS EN UN PANEL)
+  // Detectar el formato de fecha del Google Sheets
+  const sampleDate = DATA.matches.length > 0 ? DATA.matches[0].date : '';
+  let todaysMatches = [];
+  
+  if(sampleDate) {
+    // Si el formato es DD/MM (ej: "20/06"), comparar con eso
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const dateDD_MM = `${day}/${month}`;
+    const dateDD_MM_YY = `${day}/${month}/${String(now.getFullYear()).slice(-2)}`;
+    
+    // Buscar partidos de hoy sin resultado
+    todaysMatches = DATA.matches.filter(m => {
+      if(RESULTS[m.id]) return false; // Ya jugado
+      return m.date === dateDD_MM || m.date === dateDD_MM_YY || m.date.includes(dateDD_MM);
+    });
+  }
+  
+  if(todaysMatches.length > 0) {
     h += `<div style="background:#0A1F14;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px">
-      <div style="color:rgba(255,255,255,.7);margin-bottom:8px;font-weight:600">🔮 Simula resultados finales:</div>`;
-    const liveMatches = DATA.matches.filter(m => LIVE[m.id]);
-    liveMatches.forEach(m=>{
+      <div style="color:rgba(255,255,255,.7);margin-bottom:12px;font-weight:600">🎲 Próximos partidos de hoy - Simula resultados</div>`;
+    todaysMatches.forEach(m=>{
       const cur = SIMULATED_RESULTS[m.id] || LIVE[m.id] || [0,0];
-      h += `<div style="margin-bottom:12px">
+      h += `<div style="margin-bottom:14px;padding:10px;background:rgba(99,190,123,.08);border-radius:6px;border:1px solid rgba(99,190,123,.2)">
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:12px;color:rgba(255,255,255,.8)">
+          <span style="font-weight:600">${m.time}</span>
+          <span style="color:rgba(255,255,255,.5)">·</span>
+          <span style="flex:1">${m.t1} vs ${m.t2}</span>
+          <span style="color:rgba(255,255,255,.5)">${m.date}</span>
+        </div>
         <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-          <div style="display:flex;gap:8px;align-items:center;flex:1">
-            <span style="font-size:13px;font-weight:500">${m.t1}</span>
-            <input type="number" min="0" max="20" value="${cur[0]}" id="g1_${m.id}" style="width:50px;padding:6px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:13px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
+          <div style="display:flex;gap:6px;align-items:center;flex:1">
+            <span style="font-size:12px;font-weight:500;min-width:60px">${m.t1}</span>
+            <input type="number" min="0" max="20" value="${cur[0]}" id="g1_${m.id}" style="width:45px;padding:5px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:12px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
             <span style="color:rgba(255,255,255,.5)">-</span>
-            <input type="number" min="0" max="20" value="${cur[1]}" id="g2_${m.id}" style="width:50px;padding:6px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:13px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
-            <span style="font-size:13px;font-weight:500">${m.t2}</span>
+            <input type="number" min="0" max="20" value="${cur[1]}" id="g2_${m.id}" style="width:45px;padding:5px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:12px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
+            <span style="font-size:12px;font-weight:500;min-width:60px">${m.t2}</span>
           </div>
-          <button onclick="applySimulation(${m.id})" style="padding:6px 12px;background:rgba(99,190,123,.2);border:1px solid rgba(99,190,123,.5);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500">Simular</button>
-          <button onclick="clearSimulation(${m.id})" style="padding:6px 12px;background:rgba(255,255,255,.1);border:1px solid var(--line);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500">Limpiar</button>
+          <button onclick="applySimulation(${m.id})" style="padding:5px 10px;background:rgba(99,190,123,.3);border:1px solid rgba(99,190,123,.5);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500;white-space:nowrap">Simular</button>
+          <button onclick="clearSimulation(${m.id})" style="padding:5px 10px;background:rgba(255,255,255,.1);border:1px solid var(--line);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500;white-space:nowrap">Limpiar</button>
         </div>
       </div>`;
     });
-    h += `<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:8px">Ingresa los goles y haz clic en "Simular" para ver cómo cambiarían las posiciones</div></div>`;
+    h += `<div style="font-size:11px;color:rgba(255,255,255,.5);margin-top:8px">Ingresa los goles y haz clic en "Simular" para ver cómo cambian las posiciones</div></div>`;
   }
   
   h += `<div class="boardcard"><div class="boardhead"><div style="text-align:center">#</div><div>Participante</div><div style="text-align:center">Pts</div><div style="text-align:center">Exactos</div></div>`;
