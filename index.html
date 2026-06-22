@@ -235,6 +235,7 @@ input[type="number"] {
   .lv-tm img{width:40px;height:40px}
   .lv-tm-name{font-size:12.5px}
   .lv-xi{grid-template-columns:1fr;gap:10px}
+  #simulationPanel{transition:max-height .3s ease-out, opacity .3s ease-out;opacity:1}
 }
 </style>
 </head>
@@ -301,7 +302,32 @@ function initializeFilterDate(){
 }
 
 // Inicializar al cargar
-window.addEventListener('load', initializeFilterDate);
+window.addEventListener('load', () => {
+  initializeFilterDate();
+  // Restaurar tab activo desde localStorage
+  const activeTab = localStorage.getItem('activeTab') || 'tabla';
+  const tabBtn = document.querySelector(`[data-v="${activeTab}"]`);
+  if(tabBtn) tabBtn.click();
+  
+  // Restaurar estado del panel de simulación
+  setTimeout(() => {
+    const panelOpen = localStorage.getItem('simulationPanelOpen') !== 'false';
+    const panel = document.getElementById('simulationPanel');
+    const btn = document.getElementById('toggleSimulation');
+    if(panel && btn) {
+      if(!panelOpen) {
+        panel.style.maxHeight = '0px';
+        panel.style.opacity = '0';
+        panel.style.overflow = 'hidden';
+        btn.textContent = '🎲 Simular Resultados ▶';
+      } else {
+        panel.style.maxHeight = '1000px';
+        panel.style.opacity = '1';
+        btn.textContent = '🎲 Simular Resultados ▼';
+      }
+    }
+  }, 100);
+});
 let lastUpdate = null;
 
 function points(p1,p2,r1,r2){
@@ -321,6 +347,25 @@ function simulateResult(matchId, g1, g2){
   if(g1===null || g2===null || g1<0 || g2<0) delete SIMULATED_RESULTS[matchId];
   else SIMULATED_RESULTS[matchId]=[Number(g1),Number(g2)];
   renderTabla();
+}
+
+function toggleSimulationPanel(){
+  const panel = document.getElementById('simulationPanel');
+  const btn = document.getElementById('toggleSimulation');
+  const isVisible = panel.style.maxHeight !== '0px';
+  
+  if(isVisible){
+    panel.style.maxHeight = '0px';
+    panel.style.opacity = '0';
+    panel.style.overflow = 'hidden';
+    btn.textContent = '🎲 Simular Resultados ▶';
+    localStorage.setItem('simulationPanelOpen', 'false');
+  } else {
+    panel.style.maxHeight = '1000px';
+    panel.style.opacity = '1';
+    btn.textContent = '🎲 Simular Resultados ▼';
+    localStorage.setItem('simulationPanelOpen', 'true');
+  }
 }
 
 function applySimulation(matchId){
@@ -349,13 +394,13 @@ function standings(){
     DATA.matches.forEach(m=>{
       const rf=RESULTS[m.id];
       const rl=LIVE[m.id];
-      const rs=SIMULATED_RESULTS[m.id]; // Simulado tiene prioridad
-      const r = rs || rf || (rl ? rl : null);
+      const rs=SIMULATED_RESULTS[m.id];
+      const r = rf || rs || (rl ? rl : null); // REAL tiene prioridad
       if(r){
         const pt=points(m.preds[i][0],m.preds[i][1],r[0],r[1]);
         if(pt!=null){
-          if(rs) {live+=pt; if(pt===7)exact++;} // Simulado es provisional
-          else if(rf) {conf+=pt; if(pt===7)exact++;} // Final es definitivo
+          if(rf) {conf+=pt; if(pt===7)exact++;} // Real es definitivo
+          else if(rs) {live+=pt; if(pt===7)exact++;} // Simulado es provisional
           else if(rl) {live+=pt; if(pt===7)exact++;} // EN VIVO es provisional
         }
       }
@@ -417,8 +462,9 @@ function renderTabla(){
   }
   
   if(todaysMatches.length > 0) {
-    h += `<div style="background:#0A1F14;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px">
-      <div style="color:rgba(255,255,255,.7);margin-bottom:12px;font-weight:600">🎲 Próximos partidos de hoy - Simula resultados</div>`;
+    h += `<button id="toggleSimulation" onclick="toggleSimulationPanel()" style="margin-bottom:12px;padding:8px 12px;background:rgba(99,190,123,.2);border:1px solid rgba(99,190,123,.4);color:#fff;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;width:100%;transition:all .3s">🎲 Simular Resultados ▼</button>
+    <div id="simulationPanel" style="background:#0A1F14;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;max-height:1000px;overflow:hidden;transition:max-height .3s;display:block">
+      <div style="color:rgba(255,255,255,.7);margin-bottom:12px;font-weight:600">Próximos partidos de hoy - Ingresa goles y simula</div>`;
     todaysMatches.forEach(m=>{
       const cur = SIMULATED_RESULTS[m.id] || LIVE[m.id] || [0,0];
       h += `<div style="margin-bottom:14px;padding:10px;background:rgba(99,190,123,.08);border-radius:6px;border:1px solid rgba(99,190,123,.2)">
@@ -428,16 +474,18 @@ function renderTabla(){
           <span style="flex:1">${m.t1} vs ${m.t2}</span>
           <span style="color:rgba(255,255,255,.5)">${m.date}</span>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-          <div style="display:flex;gap:6px;align-items:center;flex:1">
-            <span style="font-size:12px;font-weight:500;min-width:60px">${m.t1}</span>
-            <input type="number" min="0" max="20" value="${cur[0]}" id="g1_${m.id}" style="width:45px;padding:5px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:12px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
+          <div style="display:flex;gap:6px;align-items:center;flex:1;min-width:200px">
+            <span style="font-size:12px;font-weight:500;min-width:50px">${m.t1}</span>
+            <input type="number" min="0" max="20" value="${cur[0]}" id="g1_${m.id}" style="width:40px;padding:5px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:12px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
             <span style="color:rgba(255,255,255,.5)">-</span>
-            <input type="number" min="0" max="20" value="${cur[1]}" id="g2_${m.id}" style="width:45px;padding:5px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:12px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
-            <span style="font-size:12px;font-weight:500;min-width:60px">${m.t2}</span>
+            <input type="number" min="0" max="20" value="${cur[1]}" id="g2_${m.id}" style="width:40px;padding:5px;background:#05140D;border:1px solid var(--line);color:#fff;border-radius:4px;font-size:12px;text-align:center;-moz-appearance:textfield" onkeypress="this.style.appearance='none'">
+            <span style="font-size:12px;font-weight:500;min-width:50px">${m.t2}</span>
           </div>
-          <button onclick="applySimulation(${m.id})" style="padding:5px 10px;background:rgba(99,190,123,.3);border:1px solid rgba(99,190,123,.5);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500;white-space:nowrap">Simular</button>
-          <button onclick="clearSimulation(${m.id})" style="padding:5px 10px;background:rgba(255,255,255,.1);border:1px solid var(--line);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500;white-space:nowrap">Limpiar</button>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;width:100%">
+            <button onclick="applySimulation(${m.id})" style="padding:5px 10px;background:rgba(99,190,123,.3);border:1px solid rgba(99,190,123,.5);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500;flex:1;min-width:80px">Simular</button>
+            <button onclick="clearSimulation(${m.id})" style="padding:5px 10px;background:rgba(255,255,255,.1);border:1px solid var(--line);color:#fff;border-radius:4px;font-size:11px;cursor:pointer;font-weight:500;flex:1;min-width:80px">Limpiar</button>
+          </div>
         </div>
       </div>`;
     });
@@ -613,7 +661,7 @@ const FLAGS = {
   'BOSNIA-HERZEGOVINA':'ba','CANADA':'ca','QATAR':'qa','SUIZA':'ch',
   'BRASIL':'br','ESCOCIA':'gb-sct','HAITI':'ht','MARRUECOS':'ma',
   'AUSTRALIA':'au','PARAGUAY':'py','TURQUIA':'tr','USA':'us',
-  'ALEMANIA':'de','COSTA DE MARFIL':'ci','IVORY COAST':'ci','CÔTE D\'IVOIRE':'ci','CURAZAO':'cw','CURAÇAO':'cw','ECUADOR':'ec',
+  'ALEMANIA':'de','COSTA DE MARFIL':'ci','CURAZAO':'cw','CURAÇAO':'cw','ECUADOR':'ec',
   'HOLANDA':'nl','JAPON':'jp','SUECIA':'se','TUNEZ':'tn',
   'BELGICA':'be','EGIPTO':'eg','IRAN':'ir','NUEVA ZELANDA':'nz',
   'ARABIA SAUDITA':'sa','CABO VERDE':'cv','ESPANA':'es','URUGUAY':'uy',
@@ -674,6 +722,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>{ x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
   t.classList.add('active');
   t.setAttribute('aria-selected','true');
+  localStorage.setItem('activeTab', t.dataset.v);
   document.getElementById('vTabla').style.display = t.dataset.v==='tabla'?'block':'none';
   document.getElementById('vEnvivo').style.display = t.dataset.v==='envivo'?'block':'none';
   document.getElementById('vPartidos').style.display = t.dataset.v==='partidos'?'block':'none';
