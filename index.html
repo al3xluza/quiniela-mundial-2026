@@ -259,6 +259,7 @@ input[type="number"] {
   <button class="tab" data-v="grupos" role="tab" id="tab-grupos" aria-controls="vGrupos" aria-selected="false">Grupos</button>
   <button class="tab" data-v="goleadores" role="tab" id="tab-goleadores" aria-controls="vGoleadores" aria-selected="false">Goleadores</button>
   <button class="tab" data-v="tarjetas" role="tab" id="tab-tarjetas" aria-controls="vTarjetas" aria-selected="false">Tarjetas</button>
+  <button class="tab" data-v="instrucciones" role="tab" id="tab-instrucciones" aria-controls="vInstrucciones" aria-selected="false">Instrucciones</button>
 </div>
 
 <div id="vTabla" role="tabpanel" aria-labelledby="tab-tabla" tabindex="0"></div>
@@ -267,6 +268,7 @@ input[type="number"] {
 <div id="vGrupos" role="tabpanel" aria-labelledby="tab-grupos" tabindex="0" style="display:none"></div>
 <div id="vGoleadores" role="tabpanel" aria-labelledby="tab-goleadores" tabindex="0" style="display:none"></div>
 <div id="vTarjetas" role="tabpanel" aria-labelledby="tab-tarjetas" tabindex="0" style="display:none"></div>
+<div id="vInstrucciones" role="tabpanel" aria-labelledby="tab-instrucciones" tabindex="0" style="display:none"></div>
 </div>
 
 <script>
@@ -311,7 +313,7 @@ window.addEventListener('load', () => {
   
   // Restaurar estado del panel de simulación
   setTimeout(() => {
-    const panelOpen = localStorage.getItem('simulationPanelOpen') !== 'false';
+    const panelOpen = localStorage.getItem('simulationPanelOpen') === 'true';
     const panel = document.getElementById('simulationPanel');
     const btn = document.getElementById('toggleSimulation');
     if(panel && btn) {
@@ -355,12 +357,20 @@ function toggleSimulationPanel(){
   const isVisible = panel.style.maxHeight !== '0px';
   
   if(isVisible){
+    // CERRANDO
     panel.style.maxHeight = '0px';
     panel.style.opacity = '0';
     panel.style.overflow = 'hidden';
     btn.textContent = '🎲 Simular Resultados ▶';
     localStorage.setItem('simulationPanelOpen', 'false');
+    
+    // Scroll automático hacia arriba (a tabla de posiciones) después de animar
+    setTimeout(()=>{
+      const tablaPos = document.querySelector('[role="tabpanel"]');
+      if(tablaPos) tablaPos.scrollIntoView({behavior:'smooth', block:'start'});
+    }, 150);
   } else {
+    // ABRIENDO
     panel.style.maxHeight = '1000px';
     panel.style.opacity = '1';
     btn.textContent = '🎲 Simular Resultados ▼';
@@ -395,7 +405,8 @@ function standings(){
       const rf=RESULTS[m.id];
       const rl=LIVE[m.id];
       const rs=SIMULATED_RESULTS[m.id];
-      const r = rf || rs || (rl ? rl : null); // REAL tiene prioridad
+      // PRIORIDAD: REAL > SIMULADO > LIVE (ignora LIVE si hay SIMULADO)
+      const r = rf || rs || rl;
       if(r){
         const pt=points(m.preds[i][0],m.preds[i][1],r[0],r[1]);
         if(pt!=null){
@@ -462,8 +473,8 @@ function renderTabla(){
   }
   
   if(todaysMatches.length > 0) {
-    h += `<button id="toggleSimulation" onclick="toggleSimulationPanel()" style="margin-bottom:12px;padding:8px 12px;background:rgba(99,190,123,.2);border:1px solid rgba(99,190,123,.4);color:#fff;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;width:100%;transition:all .3s">🎲 Simular Resultados ▼</button>
-    <div id="simulationPanel" style="background:#0A1F14;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;max-height:1000px;overflow:hidden;transition:max-height .3s;display:block">
+    h += `<button id="toggleSimulation" onclick="toggleSimulationPanel()" style="margin-bottom:12px;padding:8px 12px;background:rgba(99,190,123,.2);border:1px solid rgba(99,190,123,.4);color:#fff;border-radius:6px;font-size:12px;cursor:pointer;font-weight:500;width:100%;transition:all .3s">🎲 Simular Resultados ▶</button>
+    <div id="simulationPanel" style="background:#0A1F14;border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:12px;font-size:13px;max-height:0px;opacity:0;overflow:hidden;transition:max-height .3s;display:block">
       <div style="color:rgba(255,255,255,.7);margin-bottom:12px;font-weight:600">Próximos partidos de hoy - Ingresa goles y simula</div>`;
     todaysMatches.forEach(m=>{
       const cur = SIMULATED_RESULTS[m.id] || LIVE[m.id] || [0,0];
@@ -718,6 +729,286 @@ function renderGoleadores(){
   el.innerHTML=h;
 }
 
+// Renderizar tab de INSTRUCCIONES
+function renderInstrucciones(){
+  const el=document.getElementById('vInstrucciones');
+  if(!el) return;
+  
+  let h=`<div class="boardcard" style="margin:20px auto;max-width:900px;padding:24px">
+    <h2 style="font-family:'Saira Condensed';font-weight:800;font-size:24px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);margin-bottom:20px">Instrucciones de la Quiniela</h2>
+    
+    <div style="color:#FFFFFF;line-height:1.8;font-size:14px">
+      
+      <h3 style="font-family:'Saira Condensed';font-weight:700;font-size:16px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.08em;margin-top:20px;margin-bottom:10px">📋 Especificaciones Generales</h3>
+      <p><strong>PROMOTOR:</strong> Persona que promueve y administra la QUINIELA</p>
+      <p><strong>PARTICIPANTES:</strong> Cada una de las personas que integran la QUINIELA</p>
+      
+      <h3 style="font-family:'Saira Condensed';font-weight:700;font-size:16px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.08em;margin-top:20px;margin-bottom:10px">🎯 Lógica de Puntos</h3>
+      <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:12px">
+        <tr style="background:rgba(34,165,101,.15);border-bottom:1px solid var(--line)">
+          <td style="padding:8px;font-weight:600">CASO</td>
+          <td style="padding:8px;font-weight:600">DESCRIPCIÓN</td>
+          <td style="padding:8px;font-weight:600;text-align:center">PUNTOS</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">1</td>
+          <td style="padding:8px">Pegar resultado exacto (con ganador o empate) <br><span style="font-size:10px;color:rgba(255,255,255,.6)">Ver Ejemplo 1.A y 1.B</span></td>
+          <td style="padding:8px;text-align:center;color:#FFFFFF;font-weight:700">7</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">2</td>
+          <td style="padding:8px">Pegar ganador o empate sin resultado exacto <br><span style="font-size:10px;color:rgba(255,255,255,.6)">Ver Ejemplo 2.A y 2.B</span></td>
+          <td style="padding:8px;text-align:center;color:#FFFFFF;font-weight:700">3</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">3.A</td>
+          <td style="padding:8px">Pegar los goles de uno de los equipos + equipo ganador <br><span style="font-size:10px;color:rgba(255,255,255,.6)">Ver Ejemplo 3.A</span></td>
+          <td style="padding:8px;text-align:center;color:#FFFFFF;font-weight:700">4</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">3.B</td>
+          <td style="padding:8px">Pegar los goles de uno de los equipos (sin ganador) <br><span style="font-size:10px;color:rgba(255,255,255,.6)">Ver Ejemplo 3.B</span></td>
+          <td style="padding:8px;text-align:center;color:#FFFFFF;font-weight:700">1</td>
+        </tr>
+        <tr style="border-bottom:none">
+          <td style="padding:8px">4</td>
+          <td style="padding:8px">Cualquier otro resultado <br><span style="font-size:10px;color:rgba(255,255,255,.6)">Ver Ejemplo 4.A y 4.B</span></td>
+          <td style="padding:8px;text-align:center;color:#FFFFFF;font-weight:700">0</td>
+        </tr>
+      </table>
+      
+      <h3 style="font-family:'Saira Condensed';font-weight:700;font-size:16px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.08em;margin-top:20px;margin-bottom:10px">📚 Ejemplos Prácticos de Puntuación</h3>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0">
+        <!-- CASO 1 -->
+        <div style="background:rgba(34,165,101,.1);border:1px solid rgba(34,165,101,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(34,165,101,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 1.A - Resultado Exacto (Ganador)</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:var(--ok)">✅ 7 PUNTOS</div>
+          </div>
+        </div>
+        
+        <div style="background:rgba(34,165,101,.1);border:1px solid rgba(34,165,101,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(34,165,101,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 1.B - Resultado Exacto (Empate)</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">3 - 3</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">3 - 3</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:var(--ok)">✅ 7 PUNTOS</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0">
+        <!-- CASO 2 -->
+        <div style="background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(255,193,7,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 2.A - Ganador Correcto</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">3 - 0</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:var(--gold)">✅ 3 PUNTOS</div>
+          </div>
+        </div>
+        
+        <div style="background:rgba(255,193,7,.1);border:1px solid rgba(255,193,7,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(255,193,7,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 2.B - Empate Correcto</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">3 - 3</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">1 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:var(--gold)">✅ 3 PUNTOS</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0">
+        <!-- CASO 3 -->
+        <div style="background:rgba(255,152,0,.1);border:1px solid rgba(255,152,0,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(255,152,0,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 3.A - Goles + Ganador</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 0</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:var(--gold)">✅ 4 PUNTOS</div>
+          </div>
+        </div>
+        
+        <div style="background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(255,107,107,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 3.B - Goles Sin Ganador</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">0 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:#FF9800">✅ 1 PUNTO</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:15px 0">
+        <!-- CASO 4 -->
+        <div style="background:rgba(143,184,164,.1);border:1px solid rgba(143,184,164,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(143,184,164,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 4.A - Acierto Parcial</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">0 - 0</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:#8FB8A4">✅ 0 PUNTOS</div>
+          </div>
+        </div>
+        
+        <div style="background:rgba(143,184,164,.1);border:1px solid rgba(143,184,164,.3);border-radius:6px;padding:12px">
+          <div style="background:rgba(143,184,164,.2);padding:6px;text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;border-radius:4px">CASO 4.B - Error Total</div>
+          <div style="font-size:11px;line-height:1.8">
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO REAL</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">3 - 3</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="color:rgba(255,255,255,.6);font-size:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">RESULTADO PROPUESTO</div>
+            <div style="display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;align-items:center;margin-bottom:10px">
+              <div style="text-align:right;font-weight:600;font-size:13px;text-transform:uppercase">México</div>
+              <div style="text-align:center;font-family:'JetBrains Mono';font-weight:700;font-size:16px;background:#05140D;border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:6px 0;color:var(--gold)">2 - 1</div>
+              <div style="font-weight:600;font-size:13px;text-transform:uppercase">Sudáfrica</div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font-weight:700;font-size:13px;color:#8FB8A4">❌ 0 PUNTOS</div>
+          </div>
+        </div>
+      </div>
+      
+      <h3 style="font-family:'Saira Condensed';font-weight:700;font-size:16px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.08em;margin-top:20px;margin-bottom:10px">🏆 Cuadro de Premiación</h3>
+      <p>El pote se distribuye así:</p>
+      <ul style="margin-left:20px;margin-top:10px">
+        <li><strong>1er. Puesto:</strong> 70% del pote</li>
+        <li><strong>2do. Puesto:</strong> 20% del pote</li>
+        <li><strong>3er. Puesto:</strong> 10% del pote</li>
+      </ul>
+      
+      <h3 style="font-family:'Saira Condensed';font-weight:700;font-size:16px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.08em;margin-top:20px;margin-bottom:10px">⚖️ Criterios de Desempate (IMPORTANTE)</h3>
+      <div style="background:rgba(224,87,79,.15);border:1px solid rgba(224,87,79,.4);border-radius:8px;padding:14px;margin:10px 0">
+        <p style="font-weight:600;color:var(--red);margin-bottom:8px">🔴 NOTA IMPORTANTE - CRITERIOS DE DESEMPATE</p>
+        <p>En caso de que dos o más participantes queden empatados en alguna de las posiciones del cuadro de premiación (1er, 2do o 3er puesto):</p>
+        <p style="margin-top:8px"><strong>1. Primer Criterio:</strong> Se compara la cantidad de partidos con <strong>RESULTADOS EXACTOS</strong> pegados (aquellos que otorgan 7 puntos).</p>
+        <p style="margin-top:4px;margin-left:10px">→ El participante que pegue mayor cantidad de resultados exactos será el ganador del desempate y permanecerá en su posición.</p>
+        <p style="margin-top:4px;margin-left:10px">→ El perdedor pasará a la posición inmediatamente inferior.</p>
+        <p style="margin-top:8px"><strong>2. Segundo Criterio:</strong> En caso de seguir empatados, el premio de la posición se repartirá en partes iguales entre los participantes empatados.</p>
+      </div>
+      
+      <h3 style="font-family:'Saira Condensed';font-weight:700;font-size:16px;color:#FFFFFF;text-transform:uppercase;letter-spacing:.08em;margin-top:20px;margin-bottom:10px">📌 Ejemplo de Desempate</h3>
+      <table style="width:100%;border-collapse:collapse;margin:10px 0;font-size:12px">
+        <tr style="background:rgba(34,165,101,.15);border-bottom:1px solid var(--line)">
+          <td style="padding:8px;font-weight:600">#</td>
+          <td style="padding:8px;font-weight:600">Nombre</td>
+          <td style="padding:8px;font-weight:600;text-align:center">Puntuación</td>
+          <td style="padding:8px;font-weight:600;text-align:center">Exactos</td>
+          <td style="padding:8px;font-weight:600">Resultado</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">1</td>
+          <td style="padding:8px">Participante 1</td>
+          <td style="padding:8px;text-align:center">45</td>
+          <td style="padding:8px;text-align:center">7</td>
+          <td style="padding:8px">-</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">2</td>
+          <td style="padding:8px">Participante 4</td>
+          <td style="padding:8px;text-align:center">68</td>
+          <td style="padding:8px;text-align:center">12</td>
+          <td style="padding:8px;color:var(--ok);font-weight:600">🥇 1ER PUESTO</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">3</td>
+          <td style="padding:8px">Participante 5</td>
+          <td style="padding:8px;text-align:center">68</td>
+          <td style="padding:8px;text-align:center">11</td>
+          <td style="padding:8px;color:var(--gold);font-weight:600">🥈 2DO PUESTO (*)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--line)">
+          <td style="padding:8px">4</td>
+          <td style="padding:8px">Participante 7</td>
+          <td style="padding:8px;text-align:center">68</td>
+          <td style="padding:8px;text-align:center">11</td>
+          <td style="padding:8px;color:var(--gold);font-weight:600">🥈 2DO PUESTO (*)</td>
+        </tr>
+        <tr style="border-bottom:none">
+          <td colspan="5" style="padding:8px;font-size:10px;color:rgba(255,255,255,.6)">(*) Se reparte el monto del 2do puesto entre los dos participantes empatados</td>
+        </tr>
+      </table>
+      
+    </div>
+  </div>`;
+  
+  el.innerHTML=h;
+}
+
 document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.querySelectorAll('.tab').forEach(x=>{ x.classList.remove('active'); x.setAttribute('aria-selected','false'); });
   t.classList.add('active');
@@ -729,6 +1020,8 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   document.getElementById('vGrupos').style.display = t.dataset.v==='grupos'?'block':'none';
   document.getElementById('vGoleadores').style.display = t.dataset.v==='goleadores'?'block':'none';
   document.getElementById('vTarjetas').style.display = t.dataset.v==='tarjetas'?'block':'none';
+  document.getElementById('vInstrucciones').style.display = t.dataset.v==='instrucciones'?'block':'none';
+  if(t.dataset.v==='instrucciones') renderInstrucciones();
 }));
 document.getElementById('btnFetch').addEventListener('click',()=>loadResults(false));
 
@@ -876,6 +1169,21 @@ function renderEnvivo(sum){
   const comp=sum?.header?.competitions?.[0];
   if(!comp){ el.innerHTML=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div><div class="lv-empty">No hay detalles disponibles del partido.</div></div>`; return; }
 
+  // DEBUG: Loguear datos de eventos
+  const keyEvents = getLiveKeyEvents(sum, comp);
+  const st = comp.status || (sum.header?.status) || {};
+  const currentMin = parseInt(st.displayClock?.match(/\d+/)?.[0] || 0);
+  console.log('=== QUINIELA EN VIVO DEBUG ===');
+  console.log('⏱️ Minuto Actual:', currentMin);
+  console.log('📊 Total Eventos:', keyEvents.length);
+  keyEvents.forEach((e, i) => {
+    const txt = e.text || e.displayText || e.shortText || e.type?.text || e.type?.description || '';
+    const eventMin = parseInt(e.clock?.displayValue?.match(/\d+/)?.[0] || e.minute || 0);
+    const isFuture = eventMin > currentMin;
+    console.log(`[${i}] Min: ${eventMin || '?'} | Futuro: ${isFuture ? '⚠️ SÍ' : '✓'} | ${txt.substring(0, 60)}`);
+  });
+  console.log('==============================');
+
   // Extraer competidores (home/away) con fallback seguro
   const cs=comp.competitors||[];
   const home=cs.find(c=>c.homeAway==='home')||cs[0]||{};
@@ -894,7 +1202,6 @@ function renderEnvivo(sum){
   const aScore=away.score!=null?away.score:'0';
   
   // Estado del partido y cálculo de breaks (Muestreo Estratégico)
-  const st=comp.status||(sum.header?.status)||{};
   const stType=st.type||{};
   const isFinal=stType.completed===true||stType.state==='post';
   const clockTxt=isFinal?'Final':(
@@ -903,7 +1210,6 @@ function renderEnvivo(sum){
     stType.shortDetail && /ht|half/i.test(stType.shortDetail) ? 'Descanso' :
     st.displayClock || 'En juego'
   );
-  const currentMin=parseInt(st.displayClock?.match(/\d+/)?.[0]||0);
 
   const detail = String(stType.detail || '').toLowerCase();
   const shortDetail = String(stType.shortDetail || '').toLowerCase();
@@ -974,6 +1280,10 @@ if(keyEvents.length){
         else if(/yellow|amarilla/.test(txt)||/yellow/i.test(typeId)){ ico='🟨'; esTipo='Tarjeta amarilla'; }
         else if(/red|roja/.test(txt)||/red/i.test(typeId)){ ico='🟥'; esTipo='Tarjeta roja'; }
         else if(/penalty|penal/.test(txt)){ ico='🎯'; esTipo='Penal'; }
+        else if(/kickoff|start of|kick off/i.test(txt)){ ico='📯'; esTipo='Inicio'; }
+        else if(/halftime|half time|half-time|descanso/i.test(txt)){ ico='📯'; esTipo='Descanso'; }
+        else if(/second half|segundo tiempo|start of second/i.test(txt)){ ico='📯'; esTipo='Segundo tiempo'; }
+        else if(/full time|final|end of match/i.test(txt)){ ico='📯'; esTipo='Final'; }
                 
         const min =
           k.clock?.displayValue ||
@@ -1015,11 +1325,10 @@ if(keyEvents.length){
         k.type?.description ||
         '';
       
-      // Mejorar descripción de pausas/delays
+      // Mejorar descripción de pausas de hidratación
       let description = descriptionRaw;
       let isHydrationBreak = false;
-      if(/^start delay/i.test(description)) { description = '💧 Hydration Break'; isHydrationBreak = true; }
-      else if(/^end delay/i.test(description)) { description = '💧 Hydration Break End'; isHydrationBreak = true; }
+      if(/drinks break/i.test(description)) { description = '💧 Pausa de Hidratación'; isHydrationBreak = true; }
       
       if(!description.trim()) return;
       
@@ -1029,8 +1338,11 @@ if(keyEvents.length){
       // No mostrar bandera en pausas de hidratación
       const flagHtml = !isHydrationBreak && teamFlag ? `<img src="${teamFlag}" class="flag" alt="">` : '';
       
+      // Mantener el minuto incluso en hidratación
+      const minDisplay = min;
+      
       colEventos+=`<div class="lv-event">
-        <span class="lv-ev-min">${min}</span>
+        <span class="lv-ev-min">${minDisplay}</span>
         ${flagHtml}
         <span class="lv-ev-ico">${ico}</span>
         <span>${description}</span>
