@@ -254,7 +254,8 @@ input[type="number"] {
 
 <div class="tabs" role="tablist" aria-label="Vistas de la quiniela">
   <button class="tab active" data-v="tabla" role="tab" id="tab-tabla" aria-controls="vTabla" aria-selected="true">Posiciones</button>
-  <button class="tab tab-envivo" data-v="envivo" role="tab" id="tab-envivo" aria-controls="vEnvivo" aria-selected="false" style="display:none"><span class="livedot" style="margin-right:5px">●</span>En Vivo</button>
+  <button class="tab tab-envivo" data-v="envivo" role="tab" id="tab-envivo" aria-controls="vEnvivo" aria-selected="false" style="display:none"><span class="livedot" style="margin-right:5px">●</span>En Vivo 1</button>
+  <button class="tab tab-envivo" data-v="envivo2" role="tab" id="tab-envivo2" aria-controls="vEnvivo2" aria-selected="false" style="display:none"><span class="livedot" style="margin-right:5px">●</span>En Vivo 2</button>
   <button class="tab" data-v="partidos" role="tab" id="tab-partidos" aria-controls="vPartidos" aria-selected="false">Partidos</button>
   <button class="tab" data-v="grupos" role="tab" id="tab-grupos" aria-controls="vGrupos" aria-selected="false">Grupos</button>
   <button class="tab" data-v="goleadores" role="tab" id="tab-goleadores" aria-controls="vGoleadores" aria-selected="false">Goleadores</button>
@@ -264,6 +265,7 @@ input[type="number"] {
 
 <div id="vTabla" role="tabpanel" aria-labelledby="tab-tabla" tabindex="0"></div>
 <div id="vEnvivo" role="tabpanel" aria-labelledby="tab-envivo" tabindex="0" style="display:none"></div>
+<div id="vEnvivo2" role="tabpanel" aria-labelledby="tab-envivo2" tabindex="0" style="display:none"></div>
 <div id="vPartidos" role="tabpanel" aria-labelledby="tab-partidos" tabindex="0" style="display:none"></div>
 <div id="vGrupos" role="tabpanel" aria-labelledby="tab-grupos" tabindex="0" style="display:none"></div>
 <div id="vGoleadores" role="tabpanel" aria-labelledby="tab-goleadores" tabindex="0" style="display:none"></div>
@@ -444,13 +446,15 @@ function renderTabla(){
   if(nLive>0){
     const liveMatches = DATA.matches.filter(m => LIVE[m.id]);
     if(liveMatches.length>0){
-      const match = liveMatches[0];
-      const sc = LIVE[match.id];
-      const minTxt = MINUTOS[match.id] ? ` (${MINUTOS[match.id]}')` : '';
-      liveDetail = ` · ⚽ <strong>${match.t1} ${sc[0]} - ${sc[1]} ${match.t2}</strong>${minTxt}`;
+      // Crear un banner separado para cada juego EN VIVO
+      liveDetail = liveMatches.map(match => {
+        const sc = LIVE[match.id];
+        const minTxt = MINUTOS[match.id] ? ` (${MINUTOS[match.id]}')` : '';
+        return `<div class="livebanner"><span class="livedot">●</span> EN VIVO · ⚽ <strong>${match.t1} ${sc[0]} - ${sc[1]} ${match.t2}</strong>${minTxt}</div>`;
+      }).join('');
     }
   }
-  let h = nLive>0 ? `<div class="livebanner"><span class="livedot">●</span> EN VIVO${liveDetail}</div>` : '';
+  let h = nLive>0 ? liveDetail : '';
   
   // PRÓXIMOS PARTIDOS + SIMULADOR (INTEGRADOS EN UN PANEL)
   // Detectar el formato de fecha del Google Sheets
@@ -478,8 +482,11 @@ function renderTabla(){
       <div style="color:rgba(255,255,255,.7);margin-bottom:12px;font-weight:600">Próximos partidos de hoy - Ingresa goles y simula</div>`;
     todaysMatches.forEach(m=>{
       const cur = SIMULATED_RESULTS[m.id] || LIVE[m.id] || [0,0];
-      h += `<div style="margin-bottom:14px;padding:10px;background:rgba(99,190,123,.08);border-radius:6px;border:1px solid rgba(99,190,123,.2)">
+      const isLive = LIVE[m.id] ? true : false;
+      const liveDot = isLive ? `<span style="color:var(--red);font-size:8px;margin-right:6px">●</span>` : '';
+      h += `<div style="margin-bottom:14px;padding:10px;background:rgba(99,190,123,.08);border-radius:6px;border:1px solid rgba(99,190,123,.2)${isLive?';border-left:3px solid var(--red)':''}\">
         <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;font-size:12px;color:rgba(255,255,255,.8)">
+          ${liveDot}
           <span style="font-weight:600">${m.time}</span>
           <span style="color:rgba(255,255,255,.5)">·</span>
           <span style="flex:1">${m.t1} vs ${m.t2}</span>
@@ -1016,6 +1023,7 @@ document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
   localStorage.setItem('activeTab', t.dataset.v);
   document.getElementById('vTabla').style.display = t.dataset.v==='tabla'?'block':'none';
   document.getElementById('vEnvivo').style.display = t.dataset.v==='envivo'?'block':'none';
+  document.getElementById('vEnvivo2').style.display = t.dataset.v==='envivo2'?'block':'none';
   document.getElementById('vPartidos').style.display = t.dataset.v==='partidos'?'block':'none';
   document.getElementById('vGrupos').style.display = t.dataset.v==='grupos'?'block':'none';
   document.getElementById('vGoleadores').style.display = t.dataset.v==='goleadores'?'block':'none';
@@ -1062,25 +1070,37 @@ let ENVIVO_EVENT = null;     // event ID de ESPN del partido en vivo actual
 let ENVIVO_TIMER = null;     // interval del refresco de detalles
 let ENVIVO_ACTIVE = false;   // tab visible / partido en curso
 
+// EN VIVO 2 - Variables para segundo partido en vivo
+let ENVIVO2_EVENT = null;    // event ID de ESPN del segundo partido en vivo
+let ENVIVO2_TIMER = null;    // interval del refresco de detalles
+let ENVIVO2_ACTIVE = false;  // tab visible / partido en curso
+
 function lvSetStatus(txt, err){
   const el=document.getElementById('lv-status');
   if(el){ el.textContent=txt||''; el.className='lv-status'+(err?' err':''); }
 }
 
 // Busca en el scoreboard de hoy un partido "in progress" y devuelve su event.
-async function findLiveEvent(){
+// Busca TODOS los partidos en vivo (puede haber 0, 1, 2 o más)
+async function findAllLiveEvents(){
   const d=new Date();
   const ymd=`${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
   const res=await fetch(`${ESPN_PROXY}?type=scoreboard&dates=${ymd}`);
   if(!res.ok) throw new Error('scoreboard '+res.status);
   const js=await res.json();
   const events=js.events||[];
-  // Estado del partido: type.state === 'in' = en curso
-  let live=events.find(e=>{
+  // Filtrar todos los en curso (type.state === 'in')
+  const live=events.filter(e=>{
     const st=e.status&&e.status.type&&e.status.type.state;
     return st==='in';
   });
-  return live||null;
+  return live; // Array vacío si no hay, o con múltiples eventos
+}
+
+// Para backward compatibility: devuelve solo el primero
+async function findLiveEvent(){
+  const all=await findAllLiveEvents();
+  return all.length > 0 ? all[0] : null;
 }
 
 // Trae el summary completo (eventos, stats, alineaciones) de un event.
@@ -1164,10 +1184,11 @@ function getLiveKeyEvents(sum, comp){
 // - Estadísticas + Reporte Oficial: Solo durante breaks, medio tiempo, y final
 // - Alineaciones: Persistentes (siempre disponibles si existen)
 // Validaciones: Usa ?. y || [] para omitir secciones si ESPN no envía datos
-function renderEnvivo(sum){
-  const el=document.getElementById('vEnvivo'); if(!el) return;
+function renderEnvivo(sum, panelId='vEnvivo'){
+  const el=document.getElementById(panelId); if(!el) return;
+  const statusId=panelId==='vEnvivo'?'lv-status':'lv-status-'+panelId.replace('vEnvivo','');
   const comp=sum?.header?.competitions?.[0];
-  if(!comp){ el.innerHTML=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div><div class="lv-empty">No hay detalles disponibles del partido.</div></div>`; return; }
+  if(!comp){ el.innerHTML=`<div class="lv-wrap"><div class="lv-status" id="${statusId}"></div><div class="lv-empty">No hay detalles disponibles del partido.</div></div>`; return; }
 
   // DEBUG: Loguear datos de eventos
   const keyEvents = getLiveKeyEvents(sum, comp);
@@ -1230,7 +1251,7 @@ function renderEnvivo(sum){
    (currentMin >= 67 && currentMin <= 73));
   
   // Construir HTML
-  let h=`<div class="lv-wrap"><div class="lv-status" id="lv-status"></div>`;
+  let h=`<div class="lv-wrap"><div class="lv-status" id="${statusId}"></div>`;
   h+=`<div class="lv-card">`;
   
   // SCOREBOARD (encabeza la columna izquierda, junto a las estadísticas)
@@ -1459,6 +1480,20 @@ async function refreshEnvivo(){
   }
 }
 
+// Refresca los detalles del segundo partido en vivo
+async function refreshEnvivo2(){
+  if(!ENVIVO2_EVENT) return;
+  try{
+    const sum=await fetchSummary(ENVIVO2_EVENT);
+    renderEnvivo(sum, 'vEnvivo2'); // Renderiza en el panel 2
+    const el=document.getElementById('lv-status-2');
+    if(el) el.innerHTML='Actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }catch(e){
+    console.error('Envivo2 summary error:',e);
+    const el=document.getElementById('lv-status-2');
+    if(el) el.innerHTML='<span style="color:var(--red)">No se pudo cargar detalles de ESPN</span>';
+  }
+}
 // ========== checkEnvivo: Detección Inteligente con Persistencia Post-Final ==========
 // Comprueba si hay partido en vivo y gestiona la visibilidad del tab EN VIVO.
 // Lógica:
@@ -1479,6 +1514,7 @@ async function checkEnvivo(){
       if(!ENVIVO_ACTIVE){
         ENVIVO_ACTIVE=true;
         tabBtn.style.display='';
+        tabBtn.click(); // Auto-switch a EN VIVO cuando aparezca
         
         // Limpiar timer anterior si existe
         if(ENVIVO_TIMER) clearInterval(ENVIVO_TIMER);
@@ -1533,6 +1569,68 @@ async function checkEnvivo(){
   }
 }
 
+// ========== checkEnvivo2: Detección inteligente del segundo partido EN VIVO ==========
+async function checkEnvivo2(){
+  const tabBtn=document.getElementById('tab-envivo2');
+  try{
+    const allLive=await findAllLiveEvents();
+    
+    // Si hay 2 o más eventos en vivo, el segundo va a EN VIVO 2
+    if(allLive.length >= 2){
+      const ev=allLive[1]; // Segundo evento
+      ENVIVO2_EVENT=ev.id;
+      
+      if(!ENVIVO2_ACTIVE){
+        ENVIVO2_ACTIVE=true;
+        tabBtn.style.display='';
+        // NO hacer auto-click en EN VIVO 2, dejar que usuario haga click manualmente
+        // (para no interrumpir si está viendo EN VIVO 1)
+        
+        // Limpiar timer anterior si existe
+        if(ENVIVO2_TIMER) clearInterval(ENVIVO2_TIMER);
+        
+        // Refresco activo cada 25s
+        ENVIVO2_TIMER=setInterval(refreshEnvivo2, 25*1000);
+        
+        // Limpiar timer de post-final si existe
+        if(tabBtn.dataset.postTimer){
+          clearTimeout(parseInt(tabBtn.dataset.postTimer));
+          tabBtn.dataset.postTimer='';
+        }
+      }
+      
+      // Refrescar detalles
+      await refreshEnvivo2();
+      
+    } else {
+      // No hay segundo partido en vivo
+      if(ENVIVO2_ACTIVE){
+        ENVIVO2_ACTIVE=false;
+        if(ENVIVO2_TIMER){ clearInterval(ENVIVO2_TIMER); ENVIVO2_TIMER=null; }
+        
+        // PERSISTENCIA: Mantener visible 10 minutos tras finalización
+        if(!tabBtn.dataset.postTimer){
+          tabBtn.dataset.postTimer=setTimeout(()=>{
+            tabBtn.style.display='none';
+            tabBtn.dataset.postTimer='';
+            if(tabBtn.classList.contains('active')){
+              document.getElementById('tab-tabla').click();
+            }
+          }, 10*60*1000);
+        }
+      } else {
+        tabBtn.style.display='none';
+      }
+      
+      ENVIVO2_EVENT=null;
+    }
+    
+  }catch(e){
+    console.error('Envivo2 check error:',e);
+    // Graceful degradation
+  }
+}
+
 // Chequeo inicial y cada 60 s (ligero: solo el scoreboard).
 // MODO PRUEBA: ?lvtest=EVENTID fuerza el tab con un partido específico (en vivo o no)
 // para verificar CORS sin depender de que haya un partido rodando ahora.
@@ -1541,7 +1639,7 @@ async function checkEnvivo(){
   const test=params.get('lvtest');
   if(test){
     const tabBtn=document.getElementById('tab-envivo');
-    document.getElementById('vEnvivo').innerHTML='<div class="lv-wrap"><div class="lv-status" id="lv-status"></div><div class="lv-empty">Cargando partido de prueba…</div></div>';
+    document.getElementById('vEnvivo').innerHTML='<div class="lv-wrap"><div class="lv-status" id="${statusId}"></div><div class="lv-empty">Cargando partido de prueba…</div></div>';
     ENVIVO_EVENT=test.trim();
     ENVIVO_ACTIVE=true;
     tabBtn.style.display='';
@@ -1553,7 +1651,9 @@ async function checkEnvivo(){
     return; // en modo prueba no corremos la detección automática
   }
   checkEnvivo();
+  checkEnvivo2();
   setInterval(checkEnvivo, 30*1000);
+  setInterval(checkEnvivo2, 30*1000);
 })();
 
 loadResults(true);
