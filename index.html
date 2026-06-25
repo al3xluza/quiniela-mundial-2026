@@ -350,7 +350,25 @@ let SIMULATED_RESULTS = {}; // {matchId: [g1, g2]} para simular resultados en vi
 function simulateResult(matchId, g1, g2){
   if(g1===null || g2===null || g1<0 || g2<0) delete SIMULATED_RESULTS[matchId];
   else SIMULATED_RESULTS[matchId]=[Number(g1),Number(g2)];
+  
+  // Guardar estado actual del panel antes de re-renderizar
+  const panel = document.getElementById('simulationPanel');
+  const panelWasOpen = panel && panel.style.maxHeight !== '0px';
+  
   renderTabla();
+  
+  // Restaurar estado del panel si estaba abierto
+  if(panelWasOpen){
+    setTimeout(()=>{
+      const panel = document.getElementById('simulationPanel');
+      const btn = document.getElementById('toggleSimulation');
+      if(panel && btn){
+        panel.style.maxHeight = '1000px';
+        panel.style.opacity = '1';
+        btn.textContent = '🎲 Simular Resultados ▼';
+      }
+    }, 10);
+  }
 }
 
 function toggleSimulationPanel(){
@@ -541,9 +559,19 @@ function renderPartidos(){
   fechas.forEach(f=>{ const isActive = gruposFilterDate===f; h+=`<button onclick="gruposFilterDate='${f}';renderPartidos()" style="background:${isActive?'var(--ok)':'rgba(255,255,255,.1)'};color:${isActive?'#15321F':'#FFFFFF'};border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer">${f}</button>`; });
   h+=`</div></div>`;
   const fechasAMostrar = gruposFilterDate ? [gruposFilterDate] : fechas;
-  fechasAMostrar.forEach(d=>{ if(!byDate[d]) return; h+=`<div class="dayhdr">${d}</div><div class="daymatches">`; byDate[d].forEach(m=>{ const r=RESULTS[m.id]; const lv=(!r && LIVE[m.id]) ? LIVE[m.id] : null; const sc=r||lv; const scls=r?'':(lv?'live':'pending'); const estTxt=r?'Final':(lv?'<span class="livetag">● EN VIVO</span>':'Por jugar'); const mst=r?'is-final':(lv?'is-live':''); const minHtml=lv && MINUTOS[m.id]?`<div class="min-txt">${MINUTOS[m.id]}'</div>`:''; h+=`<div class="match ${mst}" id="m${m.id}"><div class="mrow" onclick="toggle(${m.id})"><div class="match-team t1"><span class="tname">${m.t1}</span>${flagImg(m.t1,'right')}</div><div class="score ${scls}">${sc?`${sc[0]} - ${sc[1]}${minHtml}`:m.time}</div><div class="match-team">${flagImg(m.t2)}<span class="tname">${m.t2}</span></div></div><div class="minfo"><span class="gtag">GRUPO ${m.group}</span><span>${estTxt} · toca para ver predicciones</span></div><div class="mexp" id="x${m.id}"></div></div>`; }); h+=`</div>`; });
+  fechasAMostrar.forEach(d=>{ if(!byDate[d]) return; h+=`<div class="dayhdr">${d}</div><div class="daymatches">`; byDate[d].forEach(m=>{ const r=RESULTS[m.id]; const lv=(!r && LIVE[m.id]) ? LIVE[m.id] : null; const sc=r||lv; const scls=r?'':(lv?'live':'pending'); const estTxt=r?'Final':(lv?'<span class="livetag">● EN VIVO</span>':'Por jugar'); const mst=r?'is-final':(lv?'is-live':''); const minHtml=lv && MINUTOS[m.id]?`<div class="min-txt">${MINUTOS[m.id]}'</div>`:''; const stadium=m.stadium?` · ${m.stadium}`:''; h+=`<div class="match ${mst}" id="m${m.id}"><div class="mrow" onclick="toggle(${m.id})"><div class="match-team t1"><span class="tname">${m.t1}</span>${flagImg(m.t1,'right')}</div><div class="score ${scls}">${sc?`${sc[0]} - ${sc[1]}${minHtml}`:m.time}</div><div class="match-team">${flagImg(m.t2)}<span class="tname">${m.t2}</span></div></div><div class="minfo"><span class="gtag">GRUPO ${m.group}</span><span>${estTxt} · ${m.time}${stadium} · toca para ver predicciones</span></div><div class="mexp" id="x${m.id}"></div></div>`; }); h+=`</div>`; });
   h+=`</div>`;
   document.getElementById('vPartidos').innerHTML=h;
+  
+  // Restaurar predicciones abiertas si hay una guardada
+  if(OPEN_PREDICTIONS_ID){
+    setTimeout(()=>{
+      const openEl = document.getElementById('m'+OPEN_PREDICTIONS_ID);
+      if(openEl){
+        toggle(OPEN_PREDICTIONS_ID);
+      }
+    }, 10);
+  }
 }
 
 function renderGrupos(){
@@ -562,8 +590,12 @@ function toggle(id){
   const el=document.getElementById('m'+id);
   const was=el.classList.contains('open');
   document.querySelectorAll('.match.open').forEach(e=>e.classList.remove('open'));
-  if(was) return;
+  if(was){ 
+    OPEN_PREDICTIONS_ID = null;
+    return; 
+  }
   el.classList.add('open');
+  OPEN_PREDICTIONS_ID = id; // Guardar ID para restaurar después de refresh
   const m=DATA.matches.find(x=>x.id===id);
   const r=RESULTS[id] || LIVE[id];
   let rows=DATA.participants.map((n,i)=>{ const pt = r? points(m.preds[i][0],m.preds[i][1],r[0],r[1]) : null; return {n,p:m.preds[i],pt}; });
@@ -1074,6 +1106,9 @@ let ENVIVO_ACTIVE = false;   // tab visible / partido en curso
 let ENVIVO2_EVENT = null;    // event ID de ESPN del segundo partido en vivo
 let ENVIVO2_TIMER = null;    // interval del refresco de detalles
 let ENVIVO2_ACTIVE = false;  // tab visible / partido en curso
+
+// Predicciones - Estado del partido abierto
+let OPEN_PREDICTIONS_ID = null; // ID del partido cuyas predicciones están abiertas
 
 function lvSetStatus(txt, err){
   const el=document.getElementById('lv-status');
