@@ -1110,8 +1110,9 @@ let ENVIVO2_ACTIVE = false;  // tab visible / partido en curso
 // Predicciones - Estado del partido abierto
 let OPEN_PREDICTIONS_ID = null; // ID del partido cuyas predicciones están abiertas
 
-function lvSetStatus(txt, err){
-  const el=document.getElementById('lv-status');
+function lvSetStatus(txt, err, panelId='vEnvivo'){
+  const statusId=panelId==='vEnvivo'?'lv-status':'lv-status-'+panelId.replace('vEnvivo','');
+  const el=document.getElementById(statusId);
   if(el){ el.textContent=txt||''; el.className='lv-status'+(err?' err':''); }
 }
 
@@ -1521,12 +1522,10 @@ async function refreshEnvivo2(){
   try{
     const sum=await fetchSummary(ENVIVO2_EVENT);
     renderEnvivo(sum, 'vEnvivo2'); // Renderiza en el panel 2
-    const el=document.getElementById('lv-status-2');
-    if(el) el.innerHTML='Actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+    lvSetStatus('Actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'}), false, 'vEnvivo2');
   }catch(e){
     console.error('Envivo2 summary error:',e);
-    const el=document.getElementById('lv-status-2');
-    if(el) el.innerHTML='<span style="color:var(--red)">No se pudo cargar detalles de ESPN</span>';
+    lvSetStatus('No se pudo cargar detalles de ESPN (posible bloqueo CORS). El marcador sigue disponible en Posiciones y Partidos.', true, 'vEnvivo2');
   }
 }
 // ========== checkEnvivo: Detección Inteligente con Persistencia Post-Final ==========
